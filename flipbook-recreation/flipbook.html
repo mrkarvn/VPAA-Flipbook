@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+        <style>
+            .dashboard-top-btn {
+                position: fixed;
+                top: 24px;
+                right: 32px;
+                z-index: 1000;
+                background: linear-gradient(135deg, #1976d2 0%, #3f51b5 100%);
+                color: #fff;
+                border: none;
+                padding: 12px 28px;
+                border-radius: 8px;
+                font-size: 17px;
+                cursor: pointer;
+                box-shadow: 0 4px 16px rgba(25, 118, 210, 0.18);
+                transition: background 0.2s;
+            }
+            .dashboard-top-btn:hover {
+                background: linear-gradient(135deg, #2980b9 0%, #4a5bbe 100%);
+            }
+        </style>
+        <button class="dashboard-top-btn" onclick="window.location.href='../dashboard.php'">Dashboard</button>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Flipbook</title>
+    <!-- FontAwesome removed to prevent 403 error -->
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden; /* Prevent scrollbars */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-image: url('assets/geometric-blue.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            perspective: 4000px; /* Deeper perspective for 3D effect */
+            transform-style: preserve-3d; /* Establish 3D context */
+        }
+        
+        #main-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+        
+        #flipbook-container {
+            display: none; /* Hidden until loaded */
+            width: 95%;
+            height: 95vh;
+            /* max-width: 1200px; Removed to allow dynamic scaling */
+            /* max-height: 800px; Removed to allow dynamic scaling */
+            background-color: transparent; /* Make container transparent */
+            position: relative;
+            /* overflow: hidden; Removed to prevent clipping */
+            opacity: 0;
+            animation: fadeIn 0.6s ease-in-out forwards;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        #flipbook {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .page {
+            width: 50%; /* Each page takes half the flipbook width */
+            height: 100%;
+            background-color: #f5f5f5; /* Dirty white for paper-like appearance */
+            border: 1px solid #eee;
+            box-sizing: border-box;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            /* overflow: hidden; Removed to prevent clipping */
+            transform: translateZ(0); /* Force GPU acceleration */
+            -webkit-transform: translateZ(0); /* For older WebKit browsers */
+            -moz-transform: translateZ(0); /* For Firefox */
+            -ms-transform: translateZ(0); /* For IE/Edge */
+        }
+        .page-image {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; /* Ensure image scales down and maintains aspect ratio */
+            display: block; /* Remove extra space below image */
+        }
+        #controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        #controls button { /* Apply common button styles */
+            background: linear-gradient(135deg, rgba(25, 118, 210, 0.8) 0%, rgba(63, 81, 181, 0.8) 100%);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 15px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        #controls button:hover {
+            background: linear-gradient(135deg, rgba(41, 128, 185, 0.95) 0%, rgba(74, 91, 190, 0.95) 100%);
+            transform: scale(1.15) translateY(-2px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        #controls button:active {
+            transform: scale(1.05) translateY(0);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        #mute-btn.muted {
+            background: linear-gradient(135deg, rgba(211, 47, 47, 0.8) 0%, rgba(196, 30, 58, 0.8) 100%);
+            color: #ffcccc;
+            border-color: rgba(255, 100, 100, 0.4);
+        }
+
+        #mute-btn.muted:hover {
+            background: linear-gradient(135deg, rgba(229, 57, 53, 0.95) 0%, rgba(213, 40, 68, 0.95) 100%);
+            box-shadow: 0 12px 28px rgba(211, 47, 47, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        /* Toggle mute icons */
+        .mute-icon-on {
+            display: block;
+        }
+
+        .mute-icon-off {
+            display: none;
+        }
+
+        #mute-btn.muted .mute-icon-on {
+            display: none;
+        }
+
+        #mute-btn.muted .mute-icon-off {
+            display: block;
+        }
+
+        /* Make icons bigger in the left control buttons */
+        #controls button svg, #right-controls button svg {
+            width: 28px;
+            height: 28px;
+            min-width: 28px;
+            min-height: 28px;
+        }
+
+        /* Mobile optimization - horizontal button layout */
+        @media (max-width: 768px) {
+            body {
+                background-attachment: scroll; /* Fix background fit on mobile */
+            }
+
+            #controls {
+                position: fixed;
+                top: 20px;
+                left: 20px;
+                bottom: auto;
+                display: flex;
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 10px;
+                padding: 0;
+                background: none;
+                border-radius: 0;
+                backdrop-filter: none;
+                -webkit-backdrop-filter: none;
+                z-index: 200;
+                justify-content: flex-start;
+                align-items: center;
+                transform: none;
+            }
+
+            #controls button {
+                width: 50px;
+                height: 50px;
+                padding: 15px;
+                font-size: 18px;
+            }
+
+            #controls button svg, #controls button svg {
+                width: 28px;
+                height: 28px;
+                min-width: 28px;
+                min-height: 28px;
+            }
+
+            #flipbook-container {
+                width: 98%;
+                height: 70vh; /* Reduce height to give more space */
+                margin-top: -90px;
+            }
+        }
+
+                /* Cursors for zooming and panning */
+                .grab-cursor {
+                    cursor: grab;
+                }
+                .grabbing-cursor {
+                    cursor: grabbing;
+                }
+
+                /* Arrow buttons styling - Positioned outside flipbook with spacing */
+                .arrow-button-container {
+                    position: absolute;
+                    display: flex;
+                    gap: 15px;
+                    pointer-events: none; /* Allow clicks to pass through */
+                    width: 100%;
+                    height: 100%;
+                    top: 0;
+                    left: 0;
+                    box-sizing: border-box;
+                }
+
+                /* Desktop/Tablet: Side positioning outside the book */
+                @media (min-width: 769px) {
+                    .arrow-button-container {
+                        justify-content: space-between;
+                        align-items: center;
+                        flex-direction: row;
+                        padding: 0 0; /* Will position via child elements */
+                    }
+                }
+
+                /* Mobile: Bottom positioning below the book */
+                @media (max-width: 768px) {
+                    .arrow-button-container {
+                        position: fixed;
+                        bottom: 0;
+                        left: 50%;
+                        width: auto;
+                        height: auto;
+                        top: auto;
+                        justify-content: center;
+                        align-items: center;
+                        flex-direction: row;
+                        z-index: 1000;
+                        /* Using calc to center horizontally */
+                        transform: translateX(-50%);
+                    }
+                }
+
+                .arrow-button {
+                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(240, 240, 240, 0.9) 100%);
+                    color: #333;
+                    border: 2px solid rgba(255, 255, 255, 0.6);
+                    padding: 0;
+                    cursor: pointer;
+                    font-size: 24px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+                    opacity: 1;
+                    transform: scale(1);
+                    pointer-events: auto; /* Enable clicks for buttons */
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50%;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+                    backdrop-filter: blur(10px);
+                    -webkit-backdrop-filter: blur(10px);
+                }
+
+                .arrow-button img {
+                    width: 35px;
+                    height: 35px;
+                    object-fit: contain;
+                    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+                }
+
+                .arrow-button:hover:not(:disabled) {
+                    background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(248, 248, 248, 0.98) 100%);
+                    transform: scale(1.18) translateY(-3px);
+                    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+                    border-color: rgba(255, 255, 255, 0.8);
+                }
+
+                .arrow-button:active:not(:disabled) {
+                    transform: scale(1.05) translateY(0);
+                    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.1);
+                }
+
+                .arrow-button:disabled {
+                    opacity: 0.4;
+                    transform: scale(0.9);
+                    pointer-events: none;
+                    cursor: not-allowed;
+                    background: linear-gradient(135deg, rgba(200, 200, 200, 0.6) 0%, rgba(220, 220, 220, 0.6) 100%);
+                }
+
+                /* Desktop positioning for individual buttons */
+                @media (min-width: 769px) {
+                    #arrow-left {
+                        position: absolute;
+                        left: -50px;
+                        top: 50%;
+                        transform: translateY(-50%) scale(1);
+                    }
+
+                    #arrow-left:disabled {
+                        transform: translateY(-50%) scale(0.8);
+                    }
+
+                    #arrow-right {
+                        position: absolute;
+                        right: -50px;
+                        top: 50%;
+                        transform: translateY(-50%) scale(1);
+                    }
+
+                    #arrow-right:disabled {
+                        transform: translateY(-50%) scale(0.8);
+                    }
+                }
+
+                /* Mobile positioning for individual buttons */
+                @media (max-width: 768px) {
+                    #arrow-left {
+                        order: 1;
+                        position: relative;
+                    }
+
+                    #arrow-right {
+                        order: 2;
+                        position: relative;
+                    }
+                }
+
+                /* =============== SKELETON SCREEN STYLES =============== */
+                #skeleton-loader {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    background: linear-gradient(135deg, rgba(20, 40, 80, 0.95) 0%, rgba(10, 30, 60, 0.98) 100%);
+                    z-index: 9999;
+                    opacity: 1;
+                    transition: opacity 0.6s ease-in-out;
+                }
+
+                #skeleton-loader.hidden {
+                    opacity: 0;
+                    pointer-events: none;
+                }
+
+                .skeleton-loader-content {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 40px;
+                }
+
+                /* Professional Spinner */
+                .spinner {
+                    width: 60px;
+                    height: 60px;
+                    border: 4px solid rgba(255, 255, 255, 0.1);
+                    border-top: 4px solid rgba(25, 118, 210, 1);
+                    border-radius: 50%;
+                    animation: spin 0.8s linear infinite;
+                }
+
+                @keyframes spin {
+                    to {
+                        transform: rotate(360deg);
+                    }
+                }
+
+                /* Loading Text */
+                .skeleton-loading-text {
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    font-size: 18px;
+                    font-weight: 500;
+                    color: rgba(255, 255, 255, 0.9);
+                    letter-spacing: 0.5px;
+                    text-align: center;
+                }
+
+                .skeleton-loading-text .skeleton-dot {
+                    display: inline-block;
+                    animation: pulse-dot 1.4s infinite;
+                }
+
+                .skeleton-loading-text .skeleton-dot:nth-child(2) {
+                    animation-delay: 0.2s;
+                }
+
+                .skeleton-loading-text .skeleton-dot:nth-child(3) {
+                    animation-delay: 0.4s;
+                }
+
+                @keyframes pulse-dot {
+                    0%, 60%, 100% { opacity: 0.4; }
+                    30% { opacity: 1; }
+                }
+
+                /* Progress Bar */
+                .skeleton-loading-bar {
+                    width: 250px;
+                    height: 3px;
+                    background: rgba(255, 255, 255, 0.15);
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+                }
+
+                .skeleton-loading-progress {
+                    height: 100%;
+                    background: linear-gradient(90deg, #1976d2 0%, #2196F3 50%, #1976d2 100%);
+                    background-size: 200% 100%;
+                    width: 0%;
+                    animation: progress-bar 2.5s ease-in-out forwards;
+                    box-shadow: 0 0 15px rgba(25, 118, 210, 0.6);
+                    border-radius: 10px;
+                }
+
+                @keyframes progress-bar {
+                    0% { width: 10%; }
+                    50% { width: 75%; }
+                    100% { width: 95%; }
+                }
+            </style>
+    </head><body>
+    <div id="main-wrapper">
+        <!-- Skeleton Loader Overlay -->
+        <div id="skeleton-loader">
+            <div class="skeleton-loader-content">
+                <div class="spinner"></div>
+                <div class="skeleton-loading-text">
+                    Loading your flipbook<span class="skeleton-dot">.</span><span class="skeleton-dot">.</span><span class="skeleton-dot">.</span>
+                </div>
+                <div class="skeleton-loading-bar">
+                    <div class="skeleton-loading-progress"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="flipbook-container">
+            <div id="flipbook">
+            </div>
+                    <div class="arrow-button-container">
+            <button id="arrow-left" class="arrow-button" title="Previous Page">
+                <img src="./image_btn/prev.png" alt="Previous Page">
+            </button>
+            <button id="arrow-right" class="arrow-button" title="Next Page">
+                <img src="./image_btn/next.png" alt="Next Page">
+            </button>
+        </div>
+        </div>
+
+    </div>
+    <div id="controls">
+    	<!-- Dashboard/upload button and functionality fully removed to prevent errors. Use the fixed top button for dashboard navigation. -->
+        <!-- Removed dashboard button from controls to avoid JS/UI conflicts -->
+        <button id="zoom-in-btn" class="control-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607ZM10.5 7.5v6m3-3h-6" />
+            </svg>
+        </button>
+        <button id="zoom-out-btn" class="control-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607ZM13.5 10.5h-6" />
+            </svg>
+        </button>
+        <button id="fullscreen-btn" class="control-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+            </svg>
+        </button>
+        <button id="mute-btn" class="control-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 mute-icon-on">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 0 1 0 12.728M16.463 8.288a5.25 5.25 0 0 1 0 7.424M6.75 8.25l4.5 4.5-4.5 4.5V8.25Z" />
+            </svg>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 mute-icon-off" style="display: none;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6.75a4.5 4.5 0 1 1-9 0 4.5 4.5 0 0 1 9 0zM21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0zM9.172 9.172a.75.75 0 1 0 1.06 1.06M15.75 15.75a.75.75 0 0 0-1.06-1.06m0 0a3 3 0 1 1-4.243-4.243m4.243 4.243L9.75 9.75" />
+            </svg>
+        </button>
+        <button id="download-btn" class="control-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+        </button>
+    </div>
+
+    <!-- PDF.js - will be loaded from a CDN for simplicity for now -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+    </script>
+    
+    <!-- jQuery and Turn.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="../turnjs4/extras/jquery.min.1.7.js"></script>
+    <script src="../turnjs4/lib/turn.min.js"></script>
+    <script>
+        function goHome() {
+            window.location.href = 'index.html';
+        }
+        // Extract ?id= from URL and make it available to flipbook.js
+        function getQueryParam(name) {
+            const url = new URL(window.location.href);
+            return url.searchParams.get(name);
+        }
+        window.flipbookId = getQueryParam('id');
+    </script>
+    <script src="js/flipbook.js"></script>
+</body>
+</html>
