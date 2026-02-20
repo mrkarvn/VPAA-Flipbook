@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - PDF Flipbook</title>
+    <link rel="stylesheet" href="flipbook-recreation/css/style.css">
+    <!-- FontAwesome removed to prevent 403 error -->
+    <style>
+        body {
+            background-image: url('flipbook-recreation/assets/geometric-blue.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .auth-container {
+            background: rgba(255,255,255,0.95);
+            border-radius: 18px;
+            box-shadow: 0 8px 32px rgba(25, 118, 210, 0.18);
+            padding: 40px 32px 32px 32px;
+            max-width: 350px;
+            width: 100%;
+            text-align: center;
+        }
+        .auth-container h2 {
+            color: #1976d2;
+            margin-bottom: 18px;
+        }
+        .auth-container form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .auth-container input {
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #b0bec5;
+            font-size: 16px;
+        }
+        .auth-container button {
+            background: linear-gradient(135deg, #1976d2 0%, #3f51b5 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .auth-container button:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #4a5bbe 100%);
+        }
+        .auth-switch {
+            margin-top: 12px;
+            color: #1976d2;
+            cursor: pointer;
+            font-size: 15px;
+        }
+        .auth-switch:hover {
+            text-decoration: underline;
+        }
+        .auth-logo {
+            width: 80px;
+            margin-bottom: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container" id="login-container">
+        <img src="flipbook-recreation/assets/SLU Logo - with stroke (1).png" alt="SLU Logo" class="auth-logo">
+        <h2>Login</h2>
+        <form id="login-form">
+            <input type="email" id="login-email" name="email" placeholder="Email" required>
+            <input type="password" id="login-password" name="password" placeholder="Password" required>
+            <button type="submit">Login</button>
+        </form>
+        <div class="auth-switch" onclick="showRegister()">Don't have an account? Register</div>
+    </div>
+    <div class="auth-container" id="register-container" style="display:none;">
+        <img src="flipbook-recreation/assets/SLU Logo - with stroke (1).png" alt="SLU Logo" class="auth-logo">
+        <h2>Register</h2>
+        <form id="register-form">
+            <input type="text" id="register-username" name="username" placeholder="Username" required>
+            <input type="email" id="register-email" name="email" placeholder="Email" required>
+            <input type="password" id="register-password" name="password" placeholder="Password" required>
+            <button type="submit">Register</button>
+            <div id="register-error" style="color:#d32f2f;margin-top:10px;display:none;"></div>
+        </form>
+        <div class="auth-switch" onclick="showLogin()">Already have an account? Login</div>
+    </div>
+    <script>
+        function showRegister() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('register-container').style.display = 'block';
+        }
+        function showLogin() {
+            document.getElementById('register-container').style.display = 'none';
+            document.getElementById('login-container').style.display = 'block';
+        }
+        // Login form handler
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            try {
+                const res = await fetch('flipbook-recreation/backend-php/login.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`,
+                    credentials: 'include'
+                });
+                let data;
+                try {
+                    data = await res.json();
+                } catch (jsonErr) {
+                    const text = await res.text();
+                    alert('Server error or invalid response.');
+                    console.error('Login response not JSON:', text);
+                    return;
+                }
+                if (data.message && data.message.toLowerCase().includes('success')) {
+                    window.location.href = 'dashboard.html';
+                } else {
+                    alert(data.message || 'Login failed.');
+                }
+            } catch (err) {
+                alert('Network or server error.');
+                console.error('Login fetch error:', err);
+            }
+        });
+
+        // Register form handler
+        document.getElementById('register-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const username = document.getElementById('register-username').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            const errorDiv = document.getElementById('register-error');
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
+            try {
+                const res = await fetch('flipbook-recreation/backend-php/register.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `username=${encodeURIComponent(username)}&email=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
+                });
+                const text = await res.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (jsonErr) {
+                    errorDiv.textContent = 'Server error or invalid response.';
+                    errorDiv.style.display = 'block';
+                    console.error('Registration response not JSON:', text);
+                    return;
+                }
+                if (data.message && data.message.toLowerCase().includes('register')) {
+                    alert('Registration successful! You can now log in.');
+                    showLogin();
+                } else {
+                    errorDiv.textContent = data.message || 'Registration failed.';
+                    errorDiv.style.display = 'block';
+                    console.error('Registration error:', data);
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network or server error.';
+                errorDiv.style.display = 'block';
+                console.error('Registration fetch error:', err);
+            }
+        });
+    </script>
+</body>
+</html>
